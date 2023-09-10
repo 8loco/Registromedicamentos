@@ -124,7 +124,7 @@
             }
         }
 
-        // Función para agregar un medicamento a la tabla
+        // Función para agregar un medicamento a la tabla y guardar en localStorage
         function agregarMedicamento() {
             const nombreMedicamento = document.getElementById("nombreMedicamento").value;
             const cantidadMedicamento = document.getElementById("cantidadMedicamento").value;
@@ -170,6 +170,9 @@
                 document.getElementById("cantidadMedicamento").value = "";
                 document.getElementById("horaMedicamento").value = "";
 
+                // Guardar los medicamentos en localStorage
+                guardarMedicamentosEnLocalStorage();
+                
                 // Ocultar el formulario después de agregar el medicamento
                 document.getElementById("formularioMedicamento").style.display = "none";
             }
@@ -180,7 +183,46 @@
             const table = document.getElementById("medicamentos");
             const rowIndex = row.rowIndex;
             table.deleteRow(rowIndex);
+            
+            // Actualizar el almacenamiento local después de eliminar
+            guardarMedicamentosEnLocalStorage();
         }
+
+        // Función para guardar los medicamentos en localStorage
+        function guardarMedicamentosEnLocalStorage() {
+            const medicamentos = [];
+            const filas = document.querySelectorAll("#medicamentos tbody tr");
+            
+            filas.forEach((fila) => {
+                const nombre = fila.cells[0].textContent;
+                const cantidad = fila.cells[1].textContent;
+                const hora = fila.cells[2].textContent;
+                medicamentos.push({ nombre, cantidad, hora });
+            });
+            
+            localStorage.setItem("medicamentos", JSON.stringify(medicamentos));
+        }
+
+        // Función para cargar los medicamentos desde localStorage al cargar la página
+        function cargarMedicamentosDesdeLocalStorage() {
+            const medicamentos = JSON.parse(localStorage.getItem("medicamentos")) || [];
+            const tabla = document.getElementById("medicamentos").getElementsByTagName('tbody')[0];
+
+            medicamentos.forEach((medicamento) => {
+                const fila = document.createElement("tr");
+                fila.innerHTML = `
+                    <td>${medicamento.nombre}</td>
+                    <td>${medicamento.cantidad}</td>
+                    <td>${medicamento.hora}</td>
+                    <td><input type="checkbox"></td>
+                    <td><span class="delete-icon" onclick="eliminarFila(this.parentElement.parentElement)">🗑️</span></td>
+                `;
+                tabla.appendChild(fila);
+            });
+        }
+
+        // Cargar medicamentos desde localStorage al cargar la página
+        cargarMedicamentosDesdeLocalStorage();
     </script>
 </body>
 </html>
