@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Medicamentos</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f3f3;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            background-color: #3498db;
+            color: #fff;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+
+        /* Estilos para la tabla */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        /* Estilos para el formulario */
+        #formularioMedicamento {
+            display: none;
+            margin-top: 20px;
+        }
+
+        /* Estilos para el botón dropdown */
+        .dropdown {
+            text-align: center;
+        }
+
+        .dropbtn {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Estilos para dispositivos móviles y tabletas */
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Registro de Medicamentos</h1>
+    <br>
+    <!-- Botón Dropdown para ingresar medicamentos -->
+    <div class="dropdown">
+        <button class="dropbtn">Ingresar Medicamento</button>
+        <div class="dropdown-content">
+            <form id="formularioMedicamento">
+                <label for="nombreMedicamento">Nombre del Medicamento:</label>
+                <input type="text" id="nombreMedicamento" required>
+                <br>
+                <label for="cantidadMedicamento">Cantidad a Tomar:</label>
+                <input type="number" id="cantidadMedicamento" required>
+                <br>
+                <label for="horaMedicamento">Hora de Toma:</label>
+                <input type="time" id="horaMedicamento" required>
+                <br>
+                <button type="submit">Agregar Medicamento</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla para mostrar los medicamentos -->
+    <div class="container">
+        <table id="medicamentos">
+            <thead>
+                <tr>
+                    <th>Medicamento</th>
+                    <th>Cantidad</th>
+                    <th>Hora</th>
+                    <th>Tomado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se generarán las filas de medicamentos -->
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        <p id="mensajeFooter"></p>
+    </footer>
+
+    <script>
+        // Función para mostrar u ocultar el formulario al hacer clic en el botón dropdown
+        function toggleForm() {
+            const formulario = document.getElementById("formularioMedicamento");
+            if (formulario.style.display === "block") {
+                formulario.style.display = "none";
+            } else {
+                formulario.style.display = "block";
+            }
+        }
+
+        document.querySelector(".dropbtn").addEventListener("click", toggleForm);
+
+        // Cargar medicamentos guardados en localStorage al cargar la página
+        document.addEventListener("DOMContentLoaded", function () {
+            const medicamentos = JSON.parse(localStorage.getItem("medicamentos")) || [];
+            const formularioMedicamento = document.getElementById("formularioMedicamento");
+            const tablaMedicamentos = document.getElementById("medicamentos").getElementsByTagName('tbody')[0];
+            const mensajeFooter = document.getElementById("mensajeFooter");
+
+            // Función para crear una fila de medicamento
+            function crearFilaMedicamento(medicamento) {
+                const fila = document.createElement("tr");
+
+                const nombreCel = document.createElement("td");
+                nombreCel.textContent = medicamento.nombre;
+
+                const cantidadCel = document.createElement("td");
+                cantidadCel.textContent = medicamento.cantidad;
+
+                const horaCel = document.createElement("td");
+                horaCel.textContent = medicamento.hora;
+
+                const tomadoCel = document.createElement("td");
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.addEventListener("click", function () {
+                    // Agrega aquí la lógica para marcar/desmarcar el medicamento
+                });
+                tomadoCel.appendChild(checkbox);
+
+                fila.appendChild(nombreCel);
+                fila.appendChild(cantidadCel);
+                fila.appendChild(horaCel);
+                fila.appendChild(tomadoCel);
+
+                return fila;
+            }
+
+            // Cargar los medicamentos guardados en la tabla
+            medicamentos.forEach((medicamento) => {
+                const fila = crearFilaMedicamento(medicamento);
+                tablaMedicamentos.appendChild(fila);
+            });
+
+            // Agregar un nuevo medicamento al formulario
+            formularioMedicamento.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                const nombreMedicamento = document.getElementById("nombreMedicamento").value;
+                const cantidadMedicamento = document.getElementById("cantidadMedicamento").value;
+                const horaMedicamento = document.getElementById("horaMedicamento").value;
+
+                // Validar que los campos no estén vacíos
+                if (nombreMedicamento && cantidadMedicamento && horaMedicamento) {
+                    const nuevoMedicamento = {
+                        nombre: nombreMedicamento,
+                        cantidad: cantidadMedicamento,
+                        hora: horaMedicamento
+                    };
+
+                    // Agregar el nuevo medicamento al arreglo y a la tabla
+                    medicamentos.push(nuevoMedicamento);
+                    const fila = crearFilaMedicamento(nuevoMedicamento);
+                    tablaMedicamentos.appendChild(fila);
+
+                    // Limpiar los campos del formulario
+                    document.getElementById("nombreMedicamento").value = "";
+                    document.getElementById("cantidadMedicamento").value = "";
+                    document.getElementById("horaMedicamento").value = "";
+
+                    // Ocultar el formulario después de agregar el medicamento
+                    toggleForm();
+
+                    // Guardar los medicamentos en localStorage
+                    localStorage.setItem("medicamentos", JSON.stringify(medicamentos));
+                }
+            });
+
+            // Agrega aquí la lógica para reiniciar las casillas cada 24 horas
+            // y el mensaje en el footer
+        });
+    </script>
+</body>
+</html>
