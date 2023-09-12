@@ -50,16 +50,33 @@
             background-color: #f2f2f2;
         }
 
+        td.editable {
+            cursor: pointer;
+        }
+
         /* Estilos para el formulario */
         #formularioMedicamento {
             display: none;
             margin-top: 20px;
         }
 
-        /* Estilos para el ícono de papelera */
+        /* Estilos para la ícono de papelera, lápiz y guardar */
+        .icon {
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 18px;
+        }
+
         .delete-icon {
             color: #e74c3c;
-            cursor: pointer;
+        }
+
+        .edit-icon {
+            color: #3498db;
+        }
+
+        .save-icon {
+            color: #27ae60;
         }
 
         /* Estilos para dispositivos móviles y tabletas */
@@ -67,6 +84,15 @@
             .container {
                 width: 90%;
             }
+        }
+
+        /* Estilos para la ventana modal */
+        .custom-modal {
+            border-radius: 10px;
+        }
+
+        .custom-modal-content {
+            padding: 20px;
         }
     </style>
 </head>
@@ -84,7 +110,7 @@
                 </div>
                 <div class="uk-margin">
                     <label class="uk-form-label" for="cantidadMedicamento">Cantidad a Tomar:</label>
-                    <input class="uk-input" type="number" id="cantidadMedicamento" required>
+                    <input class="uk-input" type="number" id="cantidadMedicamento" required min="1">
                 </div>
                 <div class="uk-margin">
                     <label class="uk-form-label" for="horaMedicamento">Hora de Toma:</label>
@@ -104,125 +130,134 @@
                     <th>Cantidad</th>
                     <th>Hora</th>
                     <th>Tomado</th>
-                    <th>Eliminar Medicamento</th> <!-- Nueva columna -->
+                    <th>Modificar Datos</th>
+                    <th>Eliminar Medicamento</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="medicamentosBody">
                 <!-- Aquí se generarán las filas de medicamentos -->
             </tbody>
         </table>
     </div>
 
+    <!-- Ventana modal para confirmar el borrado -->
+    <div id="modalContainer" uk-modal class="custom-modal">
+        <div class="uk-modal-dialog uk-modal-body custom-modal-content">
+            <h2 class="uk-modal-title">Confirmar Borrado</h2>
+            <p>¿Desea borrar el medicamento <span id="medicamentoABorrar"></span>?</p>
+            <p class="uk-text-right">
+                <button class="uk-button uk-button-default uk-modal-close" type="button">Cancelar</button>
+                <button class="uk-button uk-button-danger uk-modal-close" type="button" onclick="borrarMedicamento()">Borrar</button>
+            </p>
+        </div>
+    </div>
+
     <script>
-        // Función para mostrar u ocultar el formulario al hacer clic en el botón dropdown
+        // Arreglo para almacenar los medicamentos
+        let medicamentos = [];
+
+        // Función para mostrar u ocultar el formulario de ingreso de medicamentos
         function toggleForm() {
             const formulario = document.getElementById("formularioMedicamento");
-            if (formulario.style.display === "block") {
-                formulario.style.display = "none";
-            } else {
-                formulario.style.display = "block";
-            }
+            formulario.style.display = formulario.style.display === "block" ? "none" : "block";
         }
 
-        // Función para agregar un medicamento a la tabla y guardar en localStorage
+        // Función para agregar un medicamento al arreglo y actualizar la tabla
         function agregarMedicamento() {
-            const nombreMedicamento = document.getElementById("nombreMedicamento").value;
-            const cantidadMedicamento = document.getElementById("cantidadMedicamento").value;
-            const horaMedicamento = document.getElementById("horaMedicamento").value;
+            const nombre = document.getElementById("nombreMedicamento").value;
+            const cantidad = document.getElementById("cantidadMedicamento").value;
+            const hora = document.getElementById("horaMedicamento").value;
 
-            if (nombreMedicamento && cantidadMedicamento && horaMedicamento) {
-                const tabla = document.getElementById("medicamentos").getElementsByTagName('tbody')[0];
-                const fila = document.createElement("tr");
+            if (nombre && cantidad && hora) {
+                const medicamento = {
+                    nombre,
+                    cantidad,
+                    hora,
+                    tomado: false,
+                };
 
-                const nombreCel = document.createElement("td");
-                nombreCel.textContent = nombreMedicamento;
-
-                const cantidadCel = document.createElement("td");
-                cantidadCel.textContent = cantidadMedicamento;
-
-                const horaCel = document.createElement("td");
-                horaCel.textContent = horaMedicamento;
-
-                const tomadoCel = document.createElement("td");
-                const checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                tomadoCel.appendChild(checkbox);
-
-                const eliminarCel = document.createElement("td");
-                const deleteIcon = document.createElement("span");
-                deleteIcon.classList.add("delete-icon");
-                deleteIcon.textContent = "🗑️";
-                deleteIcon.addEventListener("click", function () {
-                    eliminarFila(fila);
-                });
-                eliminarCel.appendChild(deleteIcon);
-
-                fila.appendChild(nombreCel);
-                fila.appendChild(cantidadCel);
-                fila.appendChild(horaCel);
-                fila.appendChild(tomadoCel);
-                fila.appendChild(eliminarCel);
-
-                tabla.appendChild(fila);
-
-                // Limpiar los campos del formulario
-                document.getElementById("nombreMedicamento").value = "";
-                document.getElementById("cantidadMedicamento").value = "";
-                document.getElementById("horaMedicamento").value = "";
-
-                // Guardar los medicamentos en localStorage
-                guardarMedicamentosEnLocalStorage();
-                
-                // Ocultar el formulario después de agregar el medicamento
-                document.getElementById("formularioMedicamento").style.display = "none";
+                medicamentos.push(medicamento);
+                ordenarFilasPorHora();
+                actualizarTabla();
+                limpiarFormulario();
+                toggleForm();
             }
         }
 
-        // Función para eliminar una fila al hacer clic en el ícono de papelera
-        function eliminarFila(row) {
-            const table = document.getElementById("medicamentos");
-            const rowIndex = row.rowIndex;
-            table.deleteRow(rowIndex);
-            
-            // Actualizar el almacenamiento local después de eliminar
-            guardarMedicamentosEnLocalStorage();
+        // Función para limpiar el formulario después de agregar un medicamento
+        function limpiarFormulario() {
+            document.getElementById("nombreMedicamento").value = "";
+            document.getElementById("cantidadMedicamento").value = "";
+            document.getElementById("horaMedicamento").value = "";
         }
 
-        // Función para guardar los medicamentos en localStorage
-        function guardarMedicamentosEnLocalStorage() {
-            const medicamentos = [];
-            const filas = document.querySelectorAll("#medicamentos tbody tr");
-            
-            filas.forEach((fila) => {
-                const nombre = fila.cells[0].textContent;
-                const cantidad = fila.cells[1].textContent;
-                const hora = fila.cells[2].textContent;
-                medicamentos.push({ nombre, cantidad, hora });
-            });
-            
-            localStorage.setItem("medicamentos", JSON.stringify(medicamentos));
-        }
+        // Función para actualizar la tabla de medicamentos
+        function actualizarTabla() {
+            const tabla = document.getElementById("medicamentosBody");
+            tabla.innerHTML = "";
 
-        // Función para cargar los medicamentos desde localStorage al cargar la página
-        function cargarMedicamentosDesdeLocalStorage() {
-            const medicamentos = JSON.parse(localStorage.getItem("medicamentos")) || [];
-            const tabla = document.getElementById("medicamentos").getElementsByTagName('tbody')[0];
-
-            medicamentos.forEach((medicamento) => {
-                const fila = document.createElement("tr");
-                fila.innerHTML = `
-                    <td>${medicamento.nombre}</td>
-                    <td>${medicamento.cantidad}</td>
-                    <td>${medicamento.hora}</td>
-                    <td><input type="checkbox"></td>
-                    <td><span class="delete-icon" onclick="eliminarFila(this.parentElement.parentElement)">🗑️</span></td>
-                `;
-                tabla.appendChild(fila);
+            medicamentos.forEach((medicamento, index) => {
+                const fila = tabla.insertRow();
+                fila.insertCell(0).textContent = medicamento.nombre;
+                fila.insertCell(1).textContent = medicamento.cantidad;
+                fila.insertCell(2).textContent = medicamento.hora;
+                fila.insertCell(3).innerHTML = `<input type="checkbox" ${medicamento.tomado ? "checked" : ""} onclick="marcarTomado(${index})">`;
+                fila.insertCell(4).innerHTML = `<span class="icon edit-icon" onclick="editarMedicamento(${index})">✏️</span>`;
+                fila.insertCell(5).innerHTML = `<span class="icon delete-icon" onclick="prepararBorrado(${index}, '${medicamento.nombre}')">🗑️</span>`;
             });
         }
 
-        // Cargar medicamentos desde localStorage al cargar la página
-        cargarMedicamentosDesdeLocalStorage();
+        // Función para marcar o desmarcar un medicamento como tomado
+        function marcarTomado(index) {
+            medicamentos[index].tomado = !medicamentos[index].tomado;
+        }
+
+        // Función para editar un medicamento directamente en la tabla
+        function editarMedicamento(index) {
+            const fila = document.getElementById("medicamentos").rows[index + 1];
+
+            for (let i = 0; i < 3; i++) {
+                const celda = fila.cells[i];
+                const valorActual = celda.textContent;
+                celda.innerHTML = `<input type="text" value="${valorActual}" onblur="guardarCambios(${index}, this)">`;
+            }
+        }
+
+        // Función para guardar los cambios después de la edición
+        function guardarCambios(index, input) {
+            const fila = document.getElementById("medicamentos").rows[index + 1];
+            const celdas = fila.cells;
+            medicamentos[index].nombre = celdas[0].getElementsByTagName("input")[0].value;
+            medicamentos[index].cantidad = celdas[1].getElementsByTagName("input")[0].value;
+            medicamentos[index].hora = celdas[2].getElementsByTagName("input")[0].value;
+            ordenarFilasPorHora();
+            actualizarTabla();
+        }
+
+        // Función para preparar el borrado de un medicamento
+        function prepararBorrado(index, nombre) {
+            document.getElementById("medicamentoABorrar").textContent = nombre;
+            UIkit.modal("#modalContainer").show();
+        }
+
+        // Función para borrar un medicamento
+        function borrarMedicamento() {
+            const nombre = document.getElementById("medicamentoABorrar").textContent;
+            const index = medicamentos.findIndex(medicamento => medicamento.nombre === nombre);
+            if (index !== -1) {
+                medicamentos.splice(index, 1);
+                ordenarFilasPorHora();
+                actualizarTabla();
+            }
+            UIkit.modal("#modalContainer").hide();
+        }
+
+        // Función para ordenar las filas de la tabla por hora
+        function ordenarFilasPorHora() {
+            medicamentos.sort((a, b) => {
+                return a.hora.localeCompare(b.hora);
+            });
+        }
     </script>
 </body>
 </html>
